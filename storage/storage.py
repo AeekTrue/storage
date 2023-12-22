@@ -49,6 +49,10 @@ class JSONStorage(FileStorage):
     def append(self, element: dict):
         assert self._opened, 'Called without context'
         self._data.append(element)
+    
+    def get_all(self):
+        assert self._opened, 'Called without context'
+        return self._data
 
     def save_data(self): 
         super(JSONStorage, self).save_data()
