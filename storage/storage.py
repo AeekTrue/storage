@@ -4,7 +4,10 @@ from loguru import logger
 
 class NotOpenedStorageError(Exception):
     pass
-        
+
+class AlreadyOpenedStorageError(Exception):
+    pass
+
 class Storage:
     '''
     store = Storage('/path/to/storage.txt')
@@ -21,7 +24,7 @@ class Storage:
     
     def open(self):
         if self._opened:
-            logger.error('Storage already opened!')
+            raise AlreadyOpenedStorageError()
         else:
             self._opened = True
             self._load_data()

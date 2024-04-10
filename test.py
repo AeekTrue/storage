@@ -8,7 +8,6 @@ st = JSONStorage('test.json')
 
 def test_modification():
     st.open()
-    st.open()
     print('Content:', st.get_data())
     st.append({'lol': 22})
     print('Content:', st.get_data())
