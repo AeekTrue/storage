@@ -6,10 +6,13 @@ from loguru import logger
 logger.add(sys.stdout, format='[<lvl>{level}</>] - {message}')
 st = JSONStorage('test.json')
 
-with st:
-    logger.info(st.get_all())
-with st:
-    st.append({'lol':'kek'})
+def test_modification():
+    st.open()
+    st.open()
+    print('Content:', st.get_data())
+    st.append({'lol': 22})
+    print('Content:', st.get_data())
+    st.commit()
+    st.close()
 
-with st:
-    logger.info(st.get_all())
+test_modification()

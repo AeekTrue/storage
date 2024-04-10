@@ -2,37 +2,74 @@ import json as _json
 import os as _os
 from loguru import logger
 
+class NotOpenedStorageError(Exception):
+    pass
         
 class Storage:
+    '''
+    store = Storage('/path/to/storage.txt')
+    store.open() # load data to RAM
+    data = store.get_data()
+    store.modify(id=1, val=2)
+    store.commit() # write data to RAM
+    store.close()
+    '''
     _opened = False
     _modified = False
     _data = None
+    _auto_commit = False
+    
+    def open(self):
+        if self._opened:
+            logger.error('Storage already opened!')
+        else:
+            self._opened = True
+            self._load_data()
+
+    def get_data(self):
+        if self._opened:
+            return self._data
+        else:
+            raise NotOpenedStorageError()
 
     def _load_data(self):
-        ''' update _data from disk'''
-        logger.debug('load data') 
+        ''' load _data from disk'''
+        pass
 
     def _save_data(self):
-        ''' push _data to disk '''
-        #logger.debug('save data')
+        ''' save _data to disk '''
+        pass
     
-    def __enter__(self):
-        logger.debug('__enter__') 
-        self._load_data()
-        self._opened = True
-
-    def __exit__(self, type, value, traceback):
-        self._save_data()
-        logger.debug(f'__exit__')
-        self._opened = False
+    def commit(self):
+        ''' save changes to disk '''
+        if self._modified:
+            self._save_data()
+            logger.debug('Changes saved.')
+        else:
+            logger.debug('No changes to commit.')
         self._modified = False
+
+    def close(self):
+        if self._opened:
+            self._opened = False
+            self._modified=False
+            self._data = None
+        else:
+            raise NotOpenedStorageError()
+
 
     def modifier(func):
         def wrapper(self, *args, **kwargs):
+            if not self._opened:
+                raise NotOpenedStorageError()
+            r = func(self, *args, **kwargs)
             self._modified = True
-            logger.debug('data modified')
-            return func(self, *args, **kwargs)
+            logger.debug('Data modified')
+            if self._auto_commit:
+                self.commit()
+            return r
         return wrapper
+
 
 class FileStorage(Storage):
     def __init__(self, filepath):
@@ -43,32 +80,25 @@ class FileStorage(Storage):
         logger.debug(f'Storage {self._filepath} initialized.')
     
     def _init_file_storage(self, filepath):
-        with open(filepath, 'w') as f:
-            f.write('')
+        pass
 
     def get_path(self):
         return self._filepath
 
 class JSONStorage(FileStorage):
-    def __init__(self, filepath, factory=None):
+    def __init__(self, filepath):
         super(JSONStorage, self).__init__(filepath)
-        self._load_data()
-        self._data = self.get_all(factory)
     
     def _init_file_storage(self, filepath):
-        super(JSONStorage, self)._init_file_storage(filepath)
         with open(filepath, 'w') as f:
             _json.dump([], f)
 
     def _load_data(self):
-        #super(JSONStorage, self)._load_data()
-        logger.debug(f'read {self._filepath}')
         with open(self._filepath, 'r') as file:
             self._data = _json.load(file)
 
     @Storage.modifier
     def append(self, element: dict):
-        assert self._opened, 'Called without context'
         self._data.append(element)
     
     def get_all(self, factory=None):
@@ -78,11 +108,6 @@ class JSONStorage(FileStorage):
             return [factory(**record) for record in self._data]
 
     def _save_data(self): 
-        super(JSONStorage, self)._save_data()
-        if self._modified:
-            logger.debug(f'write {self._filepath}')
-            with open(self._filepath, 'w') as file:
-                _json.dump(self._data, file)
-        else:
-            logger.debug(f'_data not modified')
+        with open(self._filepath, 'w') as file:
+            _json.dump(self._data, file)
 
