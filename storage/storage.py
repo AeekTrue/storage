@@ -1,6 +1,7 @@
 import json as _json
 import os as _os
 from loguru import logger
+from collections import UserList
 
 class NotOpenedStorageError(Exception):
     pass
@@ -13,13 +14,13 @@ class Storage:
     store = Storage('/path/to/storage.txt')
     store.open() # load data to RAM
     data = store.get_data()
-    store.modify(id=1, val=2)
+    # modificate storage
     store.commit() # write data to RAM
     store.close()
     '''
     _opened = False
     _modified = False
-    _data = None
+    data = None
     _auto_commit = False
     
     def open(self):
@@ -31,16 +32,16 @@ class Storage:
 
     def get_data(self):
         if self._opened:
-            return self._data
+            return self.data
         else:
             raise NotOpenedStorageError()
 
     def _load_data(self):
-        ''' load _data from disk'''
+        ''' load data from disk'''
         pass
 
     def _save_data(self):
-        ''' save _data to disk '''
+        ''' save data to disk '''
         pass
     
     def commit(self):
@@ -56,10 +57,9 @@ class Storage:
         if self._opened:
             self._opened = False
             self._modified=False
-            self._data = None
+            self.data = None
         else:
             raise NotOpenedStorageError()
-
 
     def modifier(func):
         def wrapper(self, *args, **kwargs):
@@ -88,7 +88,8 @@ class FileStorage(Storage):
     def get_path(self):
         return self._filepath
 
-class JSONStorage(FileStorage):
+
+class JSONStorage(FileStorage, UserList):
     def __init__(self, filepath):
         super(JSONStorage, self).__init__(filepath)
     
@@ -98,19 +99,19 @@ class JSONStorage(FileStorage):
 
     def _load_data(self):
         with open(self._filepath, 'r') as file:
-            self._data = _json.load(file)
+            self.data = _json.load(file)
 
     @Storage.modifier
     def append(self, element: dict):
-        self._data.append(element)
+        self.data.append(element)
     
     def get_all(self, factory=None):
         if factory is None:
-            return self._data
+            return self.data
         else:
-            return [factory(**record) for record in self._data]
+            return [factory(**record) for record in self.data]
 
     def _save_data(self): 
         with open(self._filepath, 'w') as file:
-            _json.dump(self._data, file)
+            _json.dump(self.data, file)
 
